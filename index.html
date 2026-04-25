@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qw Falcon - Code Editor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="img/qwfalcon.png" alt="Qw Falcon" class="logo-icon">
+            <div class="logo-text">Qw Falcon</div>
+        </div>
+        <div class="toolbar">
+            <button id="run-blob-btn">Run in Blob Tab</button>
+            <button id="save-current-btn">Save Current</button>
+            <button id="settings-btn">Settings</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Files</div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="new-file-btn" id="upload-file-btn">↑ Upload</button>
+                    <button class="new-file-btn" id="new-file-btn">+ File</button>
+                    <button class="new-file-btn" id="new-dir-btn">+ Folder</button>
+                </div>
+            </div>
+            <div class="file-tree" id="file-tree"></div>
+        </div>
+
+        <div class="editor-container">
+            <div class="tabs" id="tabs-container"></div>
+            <div class="editor-content">
+                <div class="code-editor">
+                    <div class="editor-header">
+                        <span id="editor-title">Editor</span>
+                        <span id="editor-type" class="editor-type"></span>
+                    </div>
+                    <textarea id="code-editor" spellcheck="false"></textarea>
+                </div>
+                <div class="preview-container" id="preview-container">
+                    <div class="preview-header">Live Preview</div>
+                    <iframe id="preview-frame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-downloads"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="settings-panel">
+        <div class="settings-header">
+            <div class="settings-title">Settings</div>
+            <button class="close-settings" id="close-settings">✕</button>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Split View Preview</label>
+            <div class="toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="split-view-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span>Show live preview side-by-side</span>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Auto Save</label>
+            <div class="toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="auto-save-toggle" checked>
+                    <span class="slider"></span>
+                </label>
+                <span>Save to local storage every 1 second</span>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Export / Import</label>
+            <button id="export-zip-btn" style="width: 100%; margin-bottom: 10px;">Export Entire Project (ZIP)</button>
+            <input type="file" id="import-zip-input" accept=".zip" style="display: none;">
+            <button id="import-zip-btn" style="width: 100%;">Import ZIP</button>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Danger Zone</label>
+            <button id="reset-all-btn" class="btn-danger" style="width: 100%;">Reset All Data</button>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="status-text">Ready</span>
+        <span id="save-status"></span>
+        <span class="credit">Akon'Vess</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
