@@ -3,7 +3,7 @@ let projectStructure = {
     children: {
         "index.html": {
             type: "file",
-            content: '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="UTF-8">\n    <title>My Page</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Hello World</h1>\n    <p>Edit me!</p>\n    <button id="btn">Click</button>\n    <script src="script.js"><\/script>\n</body>\n</html>',
+            content: '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="UTF-8">\n    <title>My Page</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Helo World</h1>\n    <p>Edit me!</p>\n    <button id="btn">Click me for test :D</button>\n    <script src="script.js"><\/script>\n</body>\n</html>',
             path: "/index.html"
         },
         "style.css": {
