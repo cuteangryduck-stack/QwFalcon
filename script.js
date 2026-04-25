@@ -1,22 +1,6 @@
 let projectStructure = {
     type: "dir",
-    children: {
-        "index.html": {
-            type: "file",
-            content: '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="UTF-8">\n    <title>My Page</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Helo World</h1>\n    <p>Edit me!</p>\n    <button id="btn">Click me for test :D</button>\n    <script src="script.js"><\/script>\n</body>\n</html>',
-            path: "/index.html"
-        },
-        "style.css": {
-            type: "file",
-            content: 'body {\n    font-family: sans-serif;\n    margin: 40px;\n    background: #f0f0f0;\n}\n\nh1 {\n    color: #0066cc;\n}',
-            path: "/style.css"
-        },
-        "script.js": {
-            type: "file",
-            content: 'console.log("Script loaded");\n\ndocument.getElementById("btn")?.addEventListener("click", () => {\n    alert("Button clicked!");\n});',
-            path: "/script.js"
-        }
-    }
+    children: {}
 };
 
 let currentFileId = null;
@@ -25,6 +9,56 @@ let splitViewEnabled = false;
 let saveTimeout = null;
 let draggedItemPath = null;
 let fileCounter = 1;
+
+const defaultFiles = {
+    "index.html": '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="UTF-8">\n    <title>My Page</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Hello World</h1>\n    <p>Edit me!</p>\n    <script src="script.js"><\/script>\n</body>\n</html>',
+    "style.css": 'body {\n    font-family: sans-serif;\n    margin: 40px;\n    background: #f0f0f0;\n}\n\nh1 {\n    color: #0066cc;\n}',
+    "script.js": 'console.log("Script loaded");\n\ndocument.getElementById("btn")?.addEventListener("click", () => {\n    alert("Button clicked!");\n});'
+};
+
+function loadFromStorage() {
+    const saved = localStorage.getItem("qwfalcon_project");
+    const savedSettings = localStorage.getItem("qwfalcon_settings");
+    
+    if (savedSettings) {
+        try {
+            const settings = JSON.parse(savedSettings);
+            autoSaveEnabled = settings.autoSave !== undefined ? settings.autoSave : true;
+            splitViewEnabled = settings.splitView || false;
+            document.getElementById("auto-save-toggle").checked = autoSaveEnabled;
+            document.getElementById("split-view-toggle").checked = splitViewEnabled;
+            if (splitViewEnabled) {
+                document.getElementById("preview-container").classList.add("active");
+            }
+        } catch(e) {}
+    }
+    
+    if (saved) {
+        try {
+            projectStructure = JSON.parse(saved);
+            return true;
+        } catch(e) {}
+    }
+    
+    projectStructure = { type: "dir", children: {} };
+    for (let [name, content] of Object.entries(defaultFiles)) {
+        projectStructure.children[name] = {
+            type: "file",
+            content: content,
+            path: "/" + name
+        };
+    }
+    return false;
+}
+
+function saveToStorage() {
+    localStorage.setItem("qwfalcon_project", JSON.stringify(projectStructure));
+    localStorage.setItem("qwfalcon_settings", JSON.stringify({
+        autoSave: autoSaveEnabled,
+        splitView: splitViewEnabled
+    }));
+    document.getElementById("save-status").innerText = "Saved " + new Date().toLocaleTimeString();
+}
 
 function getNodeByPath(path) {
     if (!path || path === "/") return projectStructure;
@@ -42,13 +76,35 @@ function getNodeByPath(path) {
 
 function getParentPath(path) {
     const parts = path.split('/').filter(p => p);
+    if (parts.length <= 1) return "/";
     parts.pop();
     return "/" + parts.join('/');
 }
 
-function moveNode(sourcePath, destPath) {
-    if (sourcePath === destPath) return false;
-    if (destPath.startsWith(sourcePath + "/")) return false;
+function deleteNode(path) {
+    if (path === "/") return false;
+    const parentPath = getParentPath(path);
+    const name = path.split('/').pop();
+    const parent = getNodeByPath(parentPath);
+    
+    if (parent && parent.children && parent.children[name]) {
+        delete parent.children[name];
+        if (currentFileId === path) {
+            currentFileId = null;
+            document.getElementById("code-editor").value = "";
+            document.getElementById("editor-title").innerText = "Editor";
+            document.getElementById("editor-type").innerText = "";
+        }
+        saveToStorage();
+        renderFileTree();
+        return true;
+    }
+    return false;
+}
+
+function moveNode(sourcePath, destDirPath) {
+    if (sourcePath === destDirPath) return false;
+    if (destDirPath.startsWith(sourcePath + "/")) return false;
     
     const sourceNode = getNodeByPath(sourcePath);
     if (!sourceNode) return false;
@@ -58,20 +114,24 @@ function moveNode(sourcePath, destPath) {
     const sourceParent = getNodeByPath(sourceParentPath);
     if (!sourceParent || !sourceParent.children) return false;
     
-    const destParentPath = destPath === "/" ? "/" : destPath;
-    let destParent = getNodeByPath(destParentPath);
-    if (!destParent || destParent.type !== "dir") {
-        const destDirPath = getParentPath(destPath);
-        destParent = getNodeByPath(destDirPath);
-        if (!destParent || destParent.type !== "dir") return false;
+    let destParent = getNodeByPath(destDirPath);
+    if (!destParent || destParent.type !== "dir") return false;
+    
+    let newName = sourceName;
+    let counter = 1;
+    while (destParent.children[newName]) {
+        const parts = sourceName.split('.');
+        if (parts.length > 1) {
+            const ext = parts.pop();
+            newName = parts.join('.') + "_" + counter + "." + ext;
+        } else {
+            newName = sourceName + "_" + counter;
+        }
+        counter++;
     }
     
-    const destName = destPath === "/" ? sourceName : destPath.split('/').pop();
-    
-    if (destParent.children[destName]) return false;
-    
     delete sourceParent.children[sourceName];
-    destParent.children[destName] = sourceNode;
+    destParent.children[newName] = sourceNode;
     
     function updatePath(node, newBasePath) {
         if (node.type === "file") {
@@ -83,35 +143,17 @@ function moveNode(sourcePath, destPath) {
         }
     }
     
-    const newFilePath = (destPath === "/" ? "/" + sourceName : destPath + "/" + sourceName);
+    const newFilePath = (destDirPath === "/" ? "/" + newName : destDirPath + "/" + newName);
     updatePath(sourceNode, newFilePath);
-    
-    saveToStorage();
-    renderFileTree();
     
     if (currentFileId === sourcePath) {
         currentFileId = newFilePath;
-        const filename = sourceName;
-        document.getElementById("editor-title").innerText = filename;
+        document.getElementById("editor-title").innerText = newName;
     }
     
+    saveToStorage();
+    renderFileTree();
     return true;
-}
-
-function loadFromStorage() {
-    const saved = localStorage.getItem("qwfalcon_project");
-    if (saved) {
-        try {
-            projectStructure = JSON.parse(saved);
-            return true;
-        } catch(e) {}
-    }
-    return false;
-}
-
-function saveToStorage() {
-    localStorage.setItem("qwfalcon_project", JSON.stringify(projectStructure));
-    document.getElementById("save-status").innerText = "Saved " + new Date().toLocaleTimeString();
 }
 
 function renderFileTree() {
@@ -123,12 +165,13 @@ function renderFileTree() {
             const fullPath = node.path;
             const div = document.createElement("div");
             div.className = "file-item" + (currentFileId === fullPath ? " active" : "");
-            div.style.paddingLeft = (indent * 16 + 8) + "px";
+            div.style.paddingLeft = (indent * 20 + 12) + "px";
             div.draggable = true;
             div.setAttribute("data-path", fullPath);
             div.innerHTML = `
-                <img src="img/fileimg.png" class="file-icon" alt="file">
+                <span class="file-icon">📄</span>
                 <span class="file-name">${fullPath.split('/').pop()}</span>
+                <button class="delete-btn" data-path="${fullPath}" data-type="file">✕</button>
             `;
             
             div.ondragstart = (e) => {
@@ -149,14 +192,17 @@ function renderFileTree() {
                 e.preventDefault();
                 div.classList.remove("drag-over");
                 if (draggedItemPath && draggedItemPath !== fullPath) {
-                    moveNode(draggedItemPath, fullPath);
+                    const targetParent = getParentPath(fullPath);
+                    moveNode(draggedItemPath, targetParent);
                     draggedItemPath = null;
                 }
             };
             
             div.onclick = (e) => {
-                e.stopPropagation();
-                openFile(fullPath);
+                if (!e.target.classList.contains('delete-btn')) {
+                    e.stopPropagation();
+                    openFile(fullPath);
+                }
             };
             container.appendChild(div);
         } else if (node.type === "dir") {
@@ -164,12 +210,13 @@ function renderFileTree() {
             const dirDiv = document.createElement("div");
             const dirHeader = document.createElement("div");
             dirHeader.className = "dir-item";
-            dirHeader.style.paddingLeft = (indent * 16 + 8) + "px";
+            dirHeader.style.paddingLeft = (indent * 20 + 12) + "px";
             dirHeader.draggable = true;
             dirHeader.setAttribute("data-path", fullPath);
             dirHeader.innerHTML = `
-                <img src="img/folderimg.png" class="dir-icon" alt="folder">
+                <span class="dir-icon">📁</span>
                 <span class="dir-name">${node.name}</span>
+                <button class="delete-btn" data-path="${fullPath}" data-type="dir">✕</button>
             `;
             
             dirHeader.ondragstart = (e) => {
@@ -198,9 +245,13 @@ function renderFileTree() {
             const childrenDiv = document.createElement("div");
             childrenDiv.className = "dir-children";
             
+            let isOpen = false;
             dirHeader.onclick = (e) => {
-                e.stopPropagation();
-                childrenDiv.classList.toggle("open");
+                if (!e.target.classList.contains('delete-btn')) {
+                    e.stopPropagation();
+                    isOpen = !isOpen;
+                    childrenDiv.classList.toggle("open", isOpen);
+                }
             };
             
             dirDiv.appendChild(dirHeader);
@@ -221,6 +272,16 @@ function renderFileTree() {
         child.name = childName;
         renderNode(child, "", 0);
     }
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const path = btn.dataset.path;
+            if (confirm(`Delete ${path}?`)) {
+                deleteNode(path);
+            }
+        };
+    });
 }
 
 function openFile(path) {
@@ -386,7 +447,7 @@ function runInBlobTab() {
     
     const node = getNodeByPath(currentFileId);
     if (!node || node.type !== "file") {
-        document.getElementById("status-text").innerText = "Current file is not runnable (not HTML)";
+        document.getElementById("status-text").innerText = "Current file is not runnable";
         return;
     }
     
@@ -394,7 +455,6 @@ function runInBlobTab() {
     
     try {
         let htmlContent = node.content;
-        
         if (currentFileId.endsWith(".html")) {
             htmlContent = transformHtmlWithVirtualPaths(node.content);
         }
@@ -404,7 +464,7 @@ function runInBlobTab() {
         const newTab = window.open(url, "_blank");
         
         if (!newTab) {
-            document.getElementById("status-text").innerText = "Popup blocked. Allow popups for this site.";
+            document.getElementById("status-text").innerText = "Popup blocked. Allow popups.";
             URL.revokeObjectURL(url);
             return;
         }
@@ -415,7 +475,6 @@ function runInBlobTab() {
         }, 5000);
     } catch (err) {
         document.getElementById("status-text").innerText = "Error: " + err.message;
-        console.error(err);
     }
 }
 
@@ -438,7 +497,6 @@ function downloadCurrentFile() {
 }
 
 async function exportAsZip() {
-    const JSZip = window.JSZip;
     const zip = new JSZip();
     
     function addToZip(node, zipPath) {
@@ -461,15 +519,11 @@ async function exportAsZip() {
 }
 
 function importZip(file) {
-    const JSZip = window.JSZip;
     const zip = new JSZip();
     zip.loadAsync(file).then(function(zipData) {
-        const newStructure = {
-            type: "dir",
-            children: {}
-        };
-        
+        const newStructure = { type: "dir", children: {} };
         const promises = [];
+        
         zipData.forEach(function(relativePath, zipEntry) {
             if (!zipEntry.dir) {
                 promises.push(zipEntry.async("string").then(content => {
@@ -505,26 +559,14 @@ function importZip(file) {
 
 function resetAllData() {
     if (confirm("WARNING: This will delete all your files. Are you sure?")) {
-        projectStructure = {
-            type: "dir",
-            children: {
-                "index.html": {
-                    type: "file",
-                    content: '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="UTF-8">\n    <title>My Page</title>\n</head>\n<body>\n    <h1>Hello World</h1>\n</body>\n</html>',
-                    path: "/index.html"
-                },
-                "style.css": {
-                    type: "file",
-                    content: 'body {\n    font-family: sans-serif;\n    margin: 40px;\n}',
-                    path: "/style.css"
-                },
-                "script.js": {
-                    type: "file",
-                    content: 'console.log("Ready");',
-                    path: "/script.js"
-                }
-            }
-        };
+        projectStructure = { type: "dir", children: {} };
+        for (let [name, content] of Object.entries(defaultFiles)) {
+            projectStructure.children[name] = {
+                type: "file",
+                content: content,
+                path: "/" + name
+            };
+        }
         saveToStorage();
         renderFileTree();
         openFile("/index.html");
@@ -548,8 +590,12 @@ document.getElementById("split-view-toggle").onchange = (e) => {
     } else {
         container.classList.remove("active");
     }
+    saveToStorage();
 };
-document.getElementById("auto-save-toggle").onchange = (e) => autoSaveEnabled = e.target.checked;
+document.getElementById("auto-save-toggle").onchange = (e) => {
+    autoSaveEnabled = e.target.checked;
+    saveToStorage();
+};
 document.getElementById("export-zip-btn").onclick = exportAsZip;
 document.getElementById("import-zip-btn").onclick = () => document.getElementById("import-zip-input").click();
 document.getElementById("import-zip-input").onchange = (e) => {
@@ -568,9 +614,7 @@ document.getElementById("code-editor").addEventListener("input", () => {
     }
 });
 
-if (!loadFromStorage()) {
-    saveToStorage();
-}
+loadFromStorage();
 renderFileTree();
 
 const firstFile = Object.keys(projectStructure.children)[0];
