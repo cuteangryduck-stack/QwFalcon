@@ -44,13 +44,16 @@ header {
 }
 
 .logo-icon {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
+    font-size: 24px;
+    font-weight: bold;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .logo-text {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
     -webkit-background-clip: text;
@@ -68,7 +71,7 @@ button {
     color: var(--accent-cyan);
     border: 1px solid var(--border-color);
     padding: 6px 14px;
-    border-radius: 6px;
+    border-radius: 20px;
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
@@ -116,6 +119,7 @@ button:hover {
     margin: 0;
     padding: 4px 10px;
     font-size: 12px;
+    border-radius: 20px;
 }
 
 .file-tree {
@@ -125,7 +129,7 @@ button:hover {
 }
 
 .file-item, .dir-item {
-    padding: 6px 12px;
+    padding: 8px 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -133,6 +137,8 @@ button:hover {
     transition: background 0.15s;
     font-size: 13px;
     user-select: none;
+    border-radius: 12px;
+    margin: 2px 6px;
 }
 
 .file-item.drag-over, .dir-item.drag-over {
@@ -146,7 +152,7 @@ button:hover {
 
 .file-item.active {
     background: rgba(0, 255, 204, 0.2);
-    border-left: 2px solid var(--accent-cyan);
+    border-left: 3px solid var(--accent-cyan);
 }
 
 .dir-item {
@@ -154,9 +160,7 @@ button:hover {
 }
 
 .file-icon, .dir-icon {
-    width: 16px;
-    height: 16px;
-    object-fit: contain;
+    font-size: 16px;
 }
 
 .file-name, .dir-name {
@@ -167,12 +171,28 @@ button:hover {
 }
 
 .dir-children {
-    margin-left: 24px;
+    margin-left: 20px;
     display: none;
 }
 
 .dir-children.open {
     display: block;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: #ff8866;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    margin-left: 4px;
+}
+
+.delete-btn:hover {
+    background: rgba(255, 68, 68, 0.2);
+    color: #ff4444;
 }
 
 .editor-container {
@@ -187,6 +207,7 @@ button:hover {
     background: var(--bg-panel);
     border-bottom: 1px solid var(--border-color);
     overflow-x: auto;
+    padding: 0 10px;
 }
 
 .tab {
@@ -198,6 +219,8 @@ button:hover {
     gap: 8px;
     background: var(--bg-panel);
     min-width: 140px;
+    border-radius: 12px 12px 0 0;
+    margin-right: 2px;
 }
 
 .tab.active {
@@ -216,12 +239,12 @@ button:hover {
 }
 
 .tab-close {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: 20px;
     cursor: pointer;
     font-size: 14px;
 }
@@ -331,6 +354,7 @@ button:hover {
     font-size: 20px;
     cursor: pointer;
     padding: 0;
+    color: var(--text-primary);
 }
 
 .setting-group {
@@ -406,6 +430,10 @@ input:checked + .slider:before {
     background: #3a1a1a;
     border-color: #6a3a3a;
     color: #ff8866;
+}
+
+.btn-danger:hover {
+    background: #6a2a2a;
 }
 
 .status-bar {
