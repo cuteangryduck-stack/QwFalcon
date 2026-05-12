@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FalconType</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --main: #ff4500;
+            --untyped: #3d3d3d;
+            --surf: #141414;
+            --cur: #ff4500;
+            --cur-w: 2px;
+            --rad: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+            border-radius: var(--rad);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        #overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: -1;
+            display: none;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1000px;
+            padding: 3rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            color: var(--main);
+            border-radius: 0;
+        }
+
+        .logo span { color: #ff8c00; }
+
+        .live-metrics {
+            display: flex;
+            gap: 2.5rem;
+            color: #444;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-val { color: var(--main); min-width: 45px; }
+
+        main {
+            flex: 1;
+            width: 100%;
+            max-width: 1000px;
+            padding: 0 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        #config {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 3rem;
+        }
+
+        .btn {
+            background: var(--surf);
+            border: 1px solid #222;
+            color: #666;
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: all 0.15s ease;
+        }
+
+        .btn.active {
+            background: var(--main);
+            color: #000;
+            border-color: var(--main);
+        }
+
+        #limit-in {
+            background: var(--surf);
+            border: 1px solid #222;
+            color: var(--main);
+            width: 80px;
+            padding-left: 15px;
+            outline: none;
+            font-weight: 700;
+        }
+
+        #editor {
+            position: relative;
+            font-size: 1.8rem;
+            line-height: 1.5;
+            height: 150px;
+            overflow: hidden;
+            outline: none;
+            background: rgba(255, 69, 0, 0.02);
+            padding: 10px;
+        }
+
+        #word-wall {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .w { display: flex; border-radius: 0; }
+        .l { color: var(--untyped); border-radius: 0; position: relative; }
+        .l.ok { color: var(--main); }
+        .l.err { color: #ff0000; background: rgba(255, 0, 0, 0.15); }
+
+        #cursor {
+            position: absolute;
+            width: var(--cur-w);
+            height: 1.1em;
+            background: var(--cur);
+            box-shadow: 0 0 10px var(--cur);
+            transition: left 0.08s ease, top 0.08s ease;
+            animation: blink 0.8s infinite;
+            z-index: 5;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        #proxy { position: absolute; opacity: 0; pointer-events: none; }
+
+        #results { display: none; text-align: center; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card { background: var(--surf); padding: 2.5rem; border: 1px solid #222; }
+        .v { font-size: 3.5rem; font-weight: 900; display: block; color: var(--main); }
+        .label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: #444; }
+
+        .settings {
+            position: fixed;
+            bottom: 6rem;
+            right: 2rem;
+            background: #0f0f0f;
+            padding: 2rem;
+            border: 1px solid #222;
+            width: 340px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 8px; }
+        .group label { font-size: 0.7rem; color: #444; font-weight: 800; text-transform: uppercase; }
+        input[type="color"] { border: none; height: 45px; width: 100%; background: none; cursor: pointer; }
+
+        .toggle {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--main);
+            color: #000;
+            border: none;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            z-index: 1001;
+            font-size: 1.5rem;
+        }
+
+        .history {
+            margin-top: 4rem;
+            padding: 2rem;
+            background: #080808;
+            border: 1px solid #111;
+            font-size: 0.9rem;
+            color: #444;
+        }
+
+        .history b { color: var(--main); }
+    </style>
+</head>
+<body>
+
+<div id="overlay"></div>
+
+<header>
+    <div class="logo">Falcon<span>Type</span></div>
+    <div class="live-metrics">
+        <div>TIME: <span id="m-time" class="metric-val">0.00</span></div>
+        <div>WPM: <span id="m-wpm" class="metric-val">0.00</span></div>
+        <div>ACC: <span id="m-acc" class="metric-val">100</span>%</div>
+    </div>
+</header>
+
+<main>
+    <div id="config">
+        <button class="btn active" id="btn-time" onclick="setMode('time')">Time</button>
+        <button class="btn" id="btn-words" onclick="setMode('words')">Words</button>
+        <input type="number" id="limit-in" value="30">
+    </div>
+
+    <div id="editor" onclick="document.getElementById('proxy').focus()">
+        <div id="cursor"></div>
+        <div id="word-wall"></div>
+    </div>
+
+    <div id="results">
+        <h1 style="color: var(--main); font-size: 3rem; margin: 0;">SUMMARY</h1>
+        <div class="grid">
+            <div class="card"><span class="v" id="r-wpm">0</span><span class="label">Words Per Minute</span></div>
+            <div class="card"><span class="v" id="r-acc">0</span><span class="label">Accuracy %</span></div>
+        </div>
+        <div class="history">
+            <b>LIFETIME STATS:</b> &nbsp; 
+            Avg WPM: <span id="a-wpm">0</span> &nbsp; | &nbsp; 
+            Avg Acc: <span id="a-acc">0</span>% &nbsp; | &nbsp; 
+            Runs: <span id="a-cnt">0</span>
+        </div>
+        <button class="btn active" style="margin-top: 3rem; padding: 1.5rem 4rem;" onclick="reset()">Restart</button>
+    </div>
+
+    <input type="text" id="proxy" autocomplete="off">
+</main>
+
+<button class="toggle" onclick="toggleSet()">⚙</button>
+
+<div class="settings" id="set-ui">
+    <h3 style="margin: 0 0 1.5rem 0; letter-spacing: 3px; font-size: 0.8rem; color: var(--main);">ENGINE ROOM</h3>
+    <div class="group">
+        <label>Upload Wallpaper</label>
+        <input type="file" id="bg-up" accept="image/*" onchange="bg(this)">
+    </div>
+    <div class="group">
+        <label>Untyped Color</label>
+        <input type="color" id="c-un" value="#3d3d3d" onchange="theme()">
+    </div>
+    <div class="group">
+        <label>Typed Color</label>
+        <input type="color" id="c-ty" value="#ff4500" onchange="theme()">
+    </div>
+    <div class="group">
+        <label>Cursor Color</label>
+        <input type="color" id="c-cu" value="#ff4500" onchange="theme()">
+    </div>
+    <div class="group">
+        <label>Cursor Width</label>
+        <input type="range" id="c-th" min="1" max="15" value="2" onchange="theme()">
+    </div>
+    <button class="btn" style="width: 100%; color: var(--main);" onclick="toggleSet()">Save & Exit</button>
+</div>
+
+<script>
+    const bank = "the and for are but not you all any can had her was one our out day get has him his how now old see two way who boy did eat let man put run sit use big hot red ten fly ask way back find name very through people after words world thing move think good love small place round point show part life work head stand kind page study sound house friend father mother north world earth city house country school food light air water head heart eye hand arm foot book paper money door window table chair bed room car road tree flower sun moon star wind rain fire ice rock sand sea fish bird dog cat cow horse sheep pig chicken duck apple bread egg fish milk meat fruit cake juice tea rice soup work play sing dance sleep walk run jump swim climb read write draw talk listen look open shut give take hold keep fall bring carry show pull push".split(" ");
+
+    let mode = 'time', timer = null, timeLeft = 0, active = false, start = null;
+    let chars = 0, errs = 0, wIdx = 0, lIdx = 0, data = [];
+
+    const proxy = document.getElementById('proxy');
+    const wall = document.getElementById('word-wall');
+    const cur = document.getElementById('cursor');
+
+    function toggleSet() {
+        const s = document.getElementById('set-ui');
+        s.style.display = s.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function setMode(m) {
+        mode = m;
+        document.querySelectorAll('#config .btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + m).classList.add('active');
+        reset();
+    }
+
+    function init() {
+        wall.innerHTML = '';
+        wall.style.transform = 'translateY(0px)';
+        data = [];
+        const limit = parseInt(document.getElementById('limit-in').value) || 30;
+        const count = mode === 'words' ? limit : 250;
+        
+        for (let i = 0; i < count; i++) {
+            const txt = bank[Math.floor(Math.random() * bank.length)];
+            const div = document.createElement('div');
+            div.className = 'w';
+            const letters = [];
+            
+            [...txt, ' '].forEach(c => {
+                const s = document.createElement('span');
+                s.className = 'l';
+                s.innerText = c;
+                div.appendChild(s);
+                letters.push(s);
+            });
+
+            wall.appendChild(div);
+            data.push(letters);
+        }
+        updateCur();
+    }
+
+    function updateCur() {
+        const target = data[wIdx][lIdx];
+        const r = target.getBoundingClientRect();
+        const p = wall.getBoundingClientRect();
+        
+        // Vertical alignment fixed by calculating mid-point
+        const topPos = (r.top - p.top) + (r.height * 0.15);
+        cur.style.left = (r.left - p.left) + 'px';
+        cur.style.top = topPos + 'px';
+        
+        if (r.top - p.top > 60) {
+            wall.style.transform = `translateY(-${r.top - p.top - 20}px)`;
+        }
+    }
+
+    proxy.addEventListener('input', (e) => {
+        if (!active) startRun();
+        const key = e.data;
+        if (!key) return;
+
+        const exp = data[wIdx][lIdx].innerText;
+        if (key === exp) {
+            data[wIdx][lIdx].classList.add('ok');
+        } else {
+            data[wIdx][lIdx].classList.add('err');
+            errs++;
+        }
+
+        lIdx++;
+        chars++;
+        if (lIdx >= data[wIdx].length) {
+            lIdx = 0;
+            wIdx++;
+        }
+        if (wIdx >= data.length) finish();
+        else updateCur();
+        proxy.value = '';
+    });
+
+    proxy.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace') {
+            if (lIdx === 0 && wIdx === 0) return;
+            if (lIdx === 0) {
+                wIdx--;
+                lIdx = data[wIdx].length - 1;
+            } else {
+                lIdx--;
+            }
+            data[wIdx][lIdx].classList.remove('ok', 'err');
+            updateCur();
+        }
+    });
+
+    function startRun() {
+        active = true;
+        start = performance.now();
+        const limit = parseFloat(document.getElementById('limit-in').value) || 30;
+        
+        timer = setInterval(() => {
+            const now = performance.now();
+            const elapsed = (now - start) / 1000;
+            
+            if (mode === 'time') {
+                const remaining = Math.max(0, limit - elapsed);
+                document.getElementById('m-time').innerText = remaining.toFixed(2);
+                if (remaining <= 0) finish();
+            } else {
+                document.getElementById('m-time').innerText = elapsed.toFixed(2);
+            }
+
+            const m = elapsed / 60;
+            const curWpm = ((chars / 5) / m) || 0;
+            const curAcc = Math.max(0, Math.round(((chars - errs) / chars) * 100)) || 100;
+            document.getElementById('m-wpm').innerText = curWpm.toFixed(2);
+            document.getElementById('m-acc').innerText = curAcc;
+
+        }, 50);
+    }
+
+    function finish() {
+        clearInterval(timer);
+        active = false;
+        const dur = (performance.now() - start) / 60000;
+        const wpm = ((chars / 5) / dur).toFixed(2);
+        const acc = Math.max(0, Math.round(((chars - errs) / chars) * 100));
+
+        document.getElementById('r-wpm').innerText = wpm;
+        document.getElementById('r-acc').innerText = acc;
+        document.getElementById('editor').style.display = 'none';
+        document.getElementById('config').style.display = 'none';
+        document.getElementById('results').style.display = 'block';
+        save(parseFloat(wpm), acc);
+    }
+
+    function reset() {
+        clearInterval(timer);
+        active = false;
+        wIdx = 0; lIdx = 0; chars = 0; errs = 0;
+        document.getElementById('m-time').innerText = '0.00';
+        document.getElementById('m-wpm').innerText = '0.00';
+        document.getElementById('m-acc').innerText = '100';
+        document.getElementById('editor').style.display = 'block';
+        document.getElementById('config').style.display = 'flex';
+        document.getElementById('results').style.display = 'none';
+        init();
+        proxy.value = '';
+        proxy.focus();
+    }
+
+    function save(w, a) {
+        let s = JSON.parse(localStorage.getItem('ft_v3') || '{"c":0, "tw":0, "ta":0}');
+        s.c++; s.tw += w; s.ta += a;
+        localStorage.setItem('ft_v3', JSON.stringify(s));
+        loadStats();
+    }
+
+    function loadStats() {
+        let s = JSON.parse(localStorage.getItem('ft_v3') || '{"c":0, "tw":0, "ta":0}');
+        if(s.c > 0) {
+            document.getElementById('a-wpm').innerText = (s.tw / s.c).toFixed(2);
+            document.getElementById('a-acc').innerText = Math.round(s.ta / s.c);
+            document.getElementById('a-cnt').innerText = s.c;
+        }
+    }
+
+    function bg(el) {
+        const f = el.files[0];
+        if (f) {
+            const r = new FileReader();
+            r.onload = (e) => {
+                document.body.style.backgroundImage = `url(${e.target.result})`;
+                document.getElementById('overlay').style.display = 'block';
+            };
+            r.readAsDataURL(f);
+        }
+    }
+
+    function theme() {
+        const u = document.getElementById('c-un').value;
+        const t = document.getElementById('c-ty').value;
+        const c = document.getElementById('c-cu').value;
+        const w = document.getElementById('c-th').value;
+        document.documentElement.style.setProperty('--untyped', u);
+        document.documentElement.style.setProperty('--main', t);
+        document.documentElement.style.setProperty('--cur', c);
+        document.documentElement.style.setProperty('--cur-w', w + 'px');
+    }
+
+    window.onload = () => {
+        loadStats();
+        init();
+        proxy.focus();
+    };
+</script>
+</body>
+</html>
